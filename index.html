@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel="icon" href="https://lh3.googleusercontent.com/pw/AJFCJaWk2ppiixRneO28N-j_c1aLow6p-VW9-4eUZAFWompL_NBkjhkkxCtSYytT-31D1t4E9907mMfCnmIuvLDtzvSp8NIhNI3Imse2ZjrkFNOkEx93QTatf1jujgjUSUqLA0v6RVMZUEX4LWS2UnrXI0CE=w32-h32-s-no?authuser=0" type="image/x-icon">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap">
+    <title>Sticky Notes</title>
+    <style>
+        body {
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            overflow: hidden;
+            margin: 0;
+            touch-action: none;
+            transition: background-color 0.3s ease;
+        }
+
+        body.light-mode {
+            background-color: #ffffff;
+        }
+
+        body.dark-mode {
+            background-color: #1a1a1a;
+        }
+
+        .container {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+        }
+
+        .note {
+            position: absolute;
+            background-color: #ffffcc;
+            width: 300px;
+            height: 300px;
+            min-width: 150px;
+            min-height: 80px;
+            max-width: 90vw;
+            max-height: 90vh;
+            font-size: 15px;
+            font-family: "Roboto Mono", monospace;
+            border-radius: 2px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            z-index: 1;
+            touch-action: none;
+        }
+
+        .note .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #ffeb3b;
+            margin: 0;
+            padding: 5px 10px;
+            cursor: move;
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            touch-action: none;
+        }
+
+        .note .header .left-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .note .header .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .note .header button {
+            font-size: 14px;
+            padding: 4px 8px;
+            background-color: transparent;
+            color: #1a1a1a;
+            border: none;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .note .header button:hover {
+            color: #ff0000;
+        }
+
+        .note .header select {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 12px;
+            padding: 2px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            height: 24px;
+        }
+
+        .note .header input[type="color"] {
+            width: 18px;
+            height: 24px;
+            padding: 0;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .note .content {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 5px;
+            outline: none;
+            cursor: text;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            touch-action: pan-y pinch-zoom;
+        }
+
+        .note .content::-webkit-scrollbar {
+            display: none;
+        }
+
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            cursor: se-resize;
+            z-index: 2;
+            touch-action: none;
+            width: 20px;
+            height: 20px;
+            background-color: transparent;
+        }
+
+        .bottom-left-buttons {
+            position: fixed;
+            bottom: 12px;
+            left: 60px;
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+        }
+
+        .bottom-left-buttons.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .bottom-right-buttons {
+            position: fixed;
+            bottom: 12px;
+            right: 12px;
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .bottom-left-buttons button,
+        .bottom-right-buttons button,
+        #settingsBtn {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 24px;
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            background-color: #000000;
+            color: #ffffff;
+            border: 2px solid #ffffff;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+
+        .bottom-left-buttons button:hover,
+        .bottom-right-buttons button:hover,
+        #settingsBtn:hover {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        body.light-mode .bottom-left-buttons button,
+        body.light-mode .bottom-right-buttons button,
+        body.light-mode #settingsBtn {
+            background-color: #ffffff;
+            color: #000000;
+            border: 2px solid #000000;
+        }
+
+        body.light-mode .bottom-left-buttons button:hover,
+        body.light-mode .bottom-right-buttons button:hover,
+        body.light-mode #settingsBtn:hover {
+            background-color: #000000;
+            color: #ffffff;
+        }
+
+        #settingsBtn {
+            position: fixed;
+            bottom: 12px;
+            left: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .note {
+                width: 200px;
+                height: 250px;
+                font-size: 14px;
+            }
+
+            .bottom-left-buttons button,
+            .bottom-right-buttons button,
+            #settingsBtn {
+                width: 43.2px;
+                height: 43.2px;
+                font-size: 21.6px;
+            }
+
+            .bottom-left-buttons,
+            .bottom-right-buttons {
+                gap: 8px;
+            }
+
+            .bottom-left-buttons {
+                left: 55px;
+            }
+
+            .note .header button {
+                font-size: 12px;
+                padding: 4px 6px;
+            }
+
+            .note .header select {
+                font-size: 10px;
+                height: 20px;
+            }
+
+            .note .header input[type="color"] {
+                width: 15px;
+                height: 20px;
+            }
+
+            .resize-handle {
+                width: 25px;
+                height: 25px;
+                background-color: transparent;
+            }
+        }
+    </style>
+</head>
+<body class="light-mode">
+    <div id="container" class="container"></div>
+
+    <button id="settingsBtn">⚙️</button>
+    <div class="bottom-left-buttons">
+        <button id="saveBtn" title="Save">💾</button>
+        <button id="loadBtn" title="Load">📂</button>
+        <button id="resetBtn" title="Reset">🗑️</button>
+    </div>
+
+    <div class="bottom-right-buttons">
+        <button id="fullscreenBtn" title="Fullscreen">⛶</button>
+        <button id="addBtn" title="Add">+</button>
+        <button id="undoBtn" title="Undo">↺</button>
+        <button id="darkModeToggle" title="Dark Mode">
+            <span id="darkModeIcon" class="moon-icon">🌙</span>
+        </button>
+    </div>
+
+    <input type="file" id="loadFile" accept=".json" style="display: none;" onchange="loadNotesFromFile(event)">
+
+    <script>
+        let noteId = 0;
+        let deletedNotes = [];
+        let maxZIndex = 1;
+
+        function debounce(func, wait) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        function saveDarkModeState() {
+            const isDarkMode = document.body.classList.contains("dark-mode");
+            localStorage.setItem("darkMode", isDarkMode);
+        }
+
+        function loadDarkModeState() {
+            const savedDarkMode = localStorage.getItem("darkMode");
+            if (savedDarkMode === "true") {
+                document.body.classList.add("dark-mode");
+                document.body.classList.remove("light-mode");
+            } else {
+                document.body.classList.add("light-mode");
+                document.body.classList.remove("dark-mode");
+            }
+            updateDarkModeIcon();
+        }
+
+        function updateDarkModeIcon() {
+            const darkModeIcon = document.getElementById("darkModeIcon");
+            if (document.body.classList.contains("dark-mode")) {
+                darkModeIcon.textContent = "🌙";
+            } else {
+                darkModeIcon.textContent = "☀️";
+            }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
+            document.body.classList.toggle("light-mode");
+            saveDarkModeState();
+            updateDarkModeIcon();
+        }
+
+        function toggleSettingsMenu() {
+            const menu = document.querySelector(".bottom-left-buttons");
+            menu.classList.toggle("show");
+        }
+
+        function bringToFront(note) {
+            maxZIndex++;
+            note.style.zIndex = maxZIndex;
+            saveNotesToLocalStorage();
+        }
+
+        function createStickyNote(savedNote = null) {
+            const container = document.getElementById("container");
+            const note = document.createElement("div");
+            note.className = "note";
+            let currentNoteId;
+
+            if (savedNote) {
+                currentNoteId = savedNote.id.split('_')[1];
+                note.id = savedNote.id;
+            } else {
+                currentNoteId = noteId.toString();
+                note.id = "note_" + currentNoteId;
+            }
+
+            function positionNoteInCenter() {
+                const noteWidth = 300;
+                const noteHeight = 300;
+                const containerWidth = window.innerWidth;
+                const containerHeight = window.innerHeight;
+
+                const leftPercent = ((containerWidth - noteWidth) / 2 / containerWidth) * 100;
+                const topPercent = ((containerHeight - noteHeight) / 2 / containerHeight) * 100;
+
+                note.style.left = `${leftPercent}%`;
+                note.style.top = `${topPercent}%`;
+                note.dataset.leftPercent = leftPercent;
+                note.dataset.topPercent = topPercent;
+            }
+
+            if (savedNote) {
+                note.style.left = `${savedNote.leftPercent}%`;
+                note.style.top = `${savedNote.topPercent}%`;
+                note.dataset.leftPercent = savedNote.leftPercent;
+                note.dataset.topPercent = savedNote.topPercent;
+                note.style.width = savedNote.width || "300px";
+                note.style.height = savedNote.height || "300px";
+                note.style.zIndex = savedNote.zIndex || maxZIndex;
+                note.dataset.fontSize = savedNote.fontSize || "15px";
+                note.dataset.fontColor = savedNote.fontColor || "#000000";
+            } else {
+                positionNoteInCenter();
+                note.dataset.fontSize = "15px";
+                note.dataset.fontColor = "#000000";
+                note.style.zIndex = maxZIndex;
+                note.style.width = "300px";
+                noteId++;
+            }
+
+            note.innerHTML = `
+                <div class="header">
+                    <div class="left-group">
+                        <button class="add-note">+</button>
+                        <div class="toolbar">
+                            <select class="font-size">
+                                <option value="10px">10px</option>
+                                <option value="12px">12px</option>
+                                <option value="15px" selected>15px</option>
+                                <option value="18px">18px</option>
+                                <option value="24px">24px</option>
+                                <option value="30px">30px</option>
+                                <option value="36px">36px</option>
+                                <option value="42px">42px</option>
+                                <option value="50px">50px</option>
+                            </select>
+                            <input type="color" class="font-color" value="${savedNote ? savedNote.fontColor || '#000000' : '#000000'}">
+                            <button class="bold">B</button>
+                            <button class="italic">I</button>
+                            <button class="underline">U</button>
+                            <button class="strikethrough">S</button>
+                        </div>
+                    </div>
+                    <button class="delete" data-id="${currentNoteId}">✖</button>
+                </div>
+                <div class="content" contenteditable="true">${savedNote ? savedNote.content || "" : ""}</div>
+            `;
+
+            container.appendChild(note);
+
+            const header = note.querySelector(".header");
+            header.addEventListener("mousedown", startDrag);
+            header.addEventListener("touchstart", startDrag, { passive: false });
+
+            const content = note.querySelector(".content");
+            const fontSizeSelect = note.querySelector(".font-size");
+            const fontColorInput = note.querySelector(".font-color");
+
+            if (savedNote) {
+                fontSizeSelect.value = savedNote.fontSize || "15px";
+                fontColorInput.value = savedNote.fontColor || "#000000";
+                content.style.fontSize = savedNote.fontSize || "15px";
+                if (savedNote.fontColor) content.style.color = savedNote.fontColor;
+            } else {
+                content.style.fontSize = note.dataset.fontSize;
+            }
+
+            content.addEventListener("input", (e) => {
+                if (e.isComposing || e.inputType === "insertCompositionText") {
+                    return;
+                }
+                debounce(saveNotesToLocalStorage, 500)();
+            });
+
+            content.addEventListener("compositionend", () => {
+                debounce(saveNotesToLocalStorage, 500)();
+            });
+
+            content.addEventListener("focus", () => bringToFront(note));
+
+            content.addEventListener("paste", (e) => {
+                e.preventDefault();
+                const clipboardData = e.clipboardData;
+                const textData = clipboardData.getData("text/plain");
+                const selection = window.getSelection();
+                if (selection.rangeCount) {
+                    const range = selection.getRangeAt(0);
+                    range.deleteContents();
+                    range.insertNode(document.createTextNode(textData));
+                    range.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+                debounce(saveNotesToLocalStorage, 500)();
+            });
+
+            content.addEventListener("keydown", (e) => {
+                if (e.isComposing || e.keyCode === 229) {
+                    return;
+                }
+                const selection = window.getSelection();
+                if (!selection.isCollapsed) return;
+                document.execCommand("removeFormat", false, null);
+            });
+
+            const resizeHandle = document.createElement("div");
+            resizeHandle.className = "resize-handle";
+            note.appendChild(resizeHandle);
+            resizeHandle.addEventListener("mousedown", startResize);
+            resizeHandle.addEventListener("touchstart", startResize, { passive: false });
+
+            fontSizeSelect.addEventListener("change", (e) => {
+                note.dataset.fontSize = e.target.value;
+                content.style.fontSize = note.dataset.fontSize;
+                const spans = content.querySelectorAll("span[style*='font-size']");
+                spans.forEach(span => {
+                    span.style.fontSize = '';
+                    if (!span.getAttribute('style')) span.removeAttribute('style');
+                });
+                content.focus();
+                saveNotesToLocalStorage();
+            });
+
+            fontColorInput.addEventListener("input", (e) => {
+                content.style.color = e.target.value;
+                note.dataset.fontColor = e.target.value;
+                const spans = content.querySelectorAll("span[style*='color']");
+                spans.forEach(span => {
+                    span.style.color = '';
+                    if (!span.getAttribute('style')) span.removeAttribute('style');
+                });
+                content.focus();
+                saveNotesToLocalStorage();
+            });
+
+            const applyStyleToSelection = (button, command) => {
+                button.addEventListener("click", () => {
+                    const selection = window.getSelection();
+                    if (selection.rangeCount && !selection.isCollapsed) {
+                        document.execCommand(command, false, null);
+                    }
+                    content.focus();
+                    saveNotesToLocalStorage();
+                });
+            };
+
+            applyStyleToSelection(note.querySelector(".bold"), "bold");
+            applyStyleToSelection(note.querySelector(".italic"), "italic");
+            applyStyleToSelection(note.querySelector(".underline"), "underline");
+            applyStyleToSelection(note.querySelector(".strikethrough"), "strikeThrough");
+
+            note.querySelector(".add-note").addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                content.blur();
+                createStickyNote();
+            });
+
+            note.querySelector(".delete").addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                content.blur();
+                const noteIdToDelete = event.currentTarget.getAttribute("data-id");
+                deleteStickyNote(noteIdToDelete);
+            });
+
+            saveNotesToLocalStorage();
+        }
+
+        let isDragging = false;
+        let isResizing = false;
+        let currentNote = null;
+        let initialWidth = 0;
+        let initialHeight = 0;
+        let initialX = 0;
+        let initialY = 0;
+
+        function startResize(event) {
+            event.preventDefault();
+            isResizing = true;
+            currentNote = event.target.closest(".note");
+            bringToFront(currentNote);
+
+            initialWidth = parseFloat(currentNote.style.width) || currentNote.offsetWidth;
+            initialHeight = parseFloat(currentNote.style.height) || currentNote.offsetHeight;
+
+            if (event.type === "touchstart") {
+                const touch = event.touches[0];
+                initialX = touch.clientX;
+                initialY = touch.clientY;
+            } else {
+                initialX = event.clientX;
+                initialY = event.clientY;
+            }
+
+            document.addEventListener("mousemove", resizeNote);
+            document.addEventListener("mouseup", stopResize);
+            document.addEventListener("touchmove", resizeNote, { passive: false });
+            document.addEventListener("touchend", stopResize);
+        }
+
+        function resizeNote(event) {
+            if (!isResizing || !currentNote) return;
+
+            event.preventDefault();
+
+            let deltaX, deltaY;
+            if (event.type === "touchmove") {
+                const touch = event.touches[0];
+                deltaX = touch.clientX - initialX;
+                deltaY = touch.clientY - initialY;
+            } else {
+                deltaX = event.clientX - initialX;
+                deltaY = event.clientY - initialY;
+            }
+
+            const newWidth = Math.max(Math.min(initialWidth + deltaX, window.innerWidth * 0.9), 150);
+            const newHeight = Math.max(Math.min(initialHeight + deltaY, window.innerHeight * 0.9), 80);
+
+            currentNote.style.width = `${newWidth}px`;
+            currentNote.style.height = `${newHeight}px`;
+        }
+
+        function stopResize() {
+            isResizing = false;
+            currentNote = null;
+            document.removeEventListener("mousemove", resizeNote);
+            document.removeEventListener("mouseup", stopResize);
+            document.removeEventListener("touchmove", resizeNote);
+            document.removeEventListener("touchend", stopResize);
+            saveNotesToLocalStorage();
+        }
+
+        function startDrag(event) {
+            const header = event.target.closest(".header");
+            if (!header || event.target.tagName === "BUTTON" || event.target.tagName === "SELECT" || event.target.tagName === "INPUT") return;
+
+            event.preventDefault();
+            isDragging = true;
+            const note = header.closest(".note");
+            bringToFront(note);
+
+            const rect = note.getBoundingClientRect();
+            let offsetX, offsetY;
+
+            if (event.type === "touchstart") {
+                const touch = event.touches[0];
+                offsetX = touch.clientX - rect.left;
+                offsetY = touch.clientY - rect.top;
+            } else {
+                offsetX = event.clientX - rect.left;
+                offsetY = event.clientY - rect.top;
+            }
+
+            function dragNote(event) {
+                event.preventDefault();
+                if (!isDragging) return;
+
+                const containerWidth = window.innerWidth;
+                const containerHeight = window.innerHeight;
+                let newNoteX, newNoteY;
+
+                if (event.type === "touchmove") {
+                    const touch = event.touches[0];
+                    newNoteX = touch.clientX - offsetX;
+                    newNoteY = touch.clientY - offsetY;
+                } else {
+                    newNoteX = event.clientX - offsetX;
+                    newNoteY = event.clientY - offsetY;
+                }
+
+                let leftPercent = (newNoteX / containerWidth) * 100;
+                let topPercent = (newNoteY / containerHeight) * 100;
+                leftPercent = Math.max(0, Math.min(leftPercent, 100 - (note.offsetWidth / containerWidth) * 100));
+                topPercent = Math.max(0, Math.min(topPercent, 100 - (note.offsetHeight / containerHeight) * 100));
+
+                note.style.left = `${leftPercent}%`;
+                note.style.top = `${topPercent}%`;
+                note.dataset.leftPercent = leftPercent;
+                note.dataset.topPercent = topPercent;
+            }
+
+            function stopDrag() {
+                isDragging = false;
+                document.removeEventListener("mousemove", dragNote);
+                document.removeEventListener("mouseup", stopDrag);
+                document.removeEventListener("touchmove", dragNote);
+                document.removeEventListener("touchend", stopDrag);
+                saveNotesToLocalStorage();
+            }
+
+            document.addEventListener("mousemove", dragNote);
+            document.addEventListener("mouseup", stopDrag);
+            document.addEventListener("touchmove", dragNote, { passive: false });
+            document.addEventListener("touchend", stopDrag);
+        }
+
+        function deleteStickyNote(noteId) {
+            const note = document.getElementById("note_" + noteId);
+            if (!note) return;
+
+            const container = document.getElementById("container");
+            const notes = container.getElementsByClassName("note");
+
+            if (notes.length === 1) {
+                if (confirm("This is the last note. Would you like to reset all notes?")) {
+                    resetNotes();
+                }
+            } else {
+                deletedNotes.push({
+                    id: note.id,
+                    content: note.querySelector(".content").innerHTML,
+                    leftPercent: note.dataset.leftPercent || (parseFloat(note.style.left) / window.innerWidth * 100) || 50,
+                    topPercent: note.dataset.topPercent || (parseFloat(note.style.top) / window.innerHeight * 100) || 50,
+                    height: note.style.height || "300px",
+                    width: note.style.width || "300px",
+                    zIndex: note.style.zIndex || 1,
+                    fontSize: note.dataset.fontSize || "15px",
+                    fontColor: note.dataset.fontColor || "#000000"
+                });
+                note.remove();
+                saveNotesToLocalStorage();
+            }
+        }
+
+        function undoDelete() {
+            if (deletedNotes.length === 0) return;
+
+            const deletedNote = deletedNotes.pop();
+            createStickyNote(deletedNote);
+        }
+
+        function openResetConfirmation() {
+            if (confirm("Would you like to reset all notes?")) {
+                resetNotes();
+            }
+        }
+
+        function resetNotes() {
+            const container = document.getElementById("container");
+            container.innerHTML = "";
+            noteId = 0;
+            deletedNotes = [];
+            maxZIndex = 1;
+            localStorage.removeItem("stickyNotes");
+            localStorage.removeItem("deletedNotes");
+            localStorage.removeItem("noteId");
+            localStorage.removeItem("maxZIndex");
+            createStickyNote();
+            saveNotesToLocalStorage();
+        }
+
+        function saveNotesToLocalStorage() {
+            const notes = document.getElementsByClassName("note");
+            const notesArray = Array.from(notes).map(note => ({
+                id: note.id,
+                content: note.querySelector(".content").innerHTML,
+                leftPercent: note.dataset.leftPercent || (parseFloat(note.style.left) / window.innerWidth * 100) || 50,
+                topPercent: note.dataset.topPercent || (parseFloat(note.style.top) / window.innerHeight * 100) || 50,
+                height: note.style.height || "300px",
+                width: note.style.width || "300px",
+                zIndex: note.style.zIndex || 1,
+                fontSize: note.dataset.fontSize || "15px",
+                fontColor: note.dataset.fontColor || "#000000"
+            }));
+            localStorage.setItem("stickyNotes", JSON.stringify(notesArray));
+            localStorage.setItem("deletedNotes", JSON.stringify(deletedNotes));
+            localStorage.setItem("noteId", noteId);
+            localStorage.setItem("maxZIndex", maxZIndex);
+        }
+
+        function loadNotesFromLocalStorage() {
+            const savedNotes = localStorage.getItem("stickyNotes");
+            const savedDeletedNotes = localStorage.getItem("deletedNotes");
+            const savedNoteId = localStorage.getItem("noteId");
+            const savedMaxZIndex = localStorage.getItem("maxZIndex");
+
+            if (savedDeletedNotes) {
+                deletedNotes = JSON.parse(savedDeletedNotes) || [];
+            }
+            if (savedNoteId) {
+                noteId = parseInt(savedNoteId) || 0;
+            }
+            if (savedMaxZIndex) {
+                maxZIndex = parseInt(savedMaxZIndex) || 1;
+            }
+
+            if (savedNotes) {
+                try {
+                    const notesArray = JSON.parse(savedNotes);
+                    if (!Array.isArray(notesArray) || notesArray.length === 0) {
+                        createStickyNote();
+                        return;
+                    }
+
+                    const container = document.getElementById("container");
+                    container.innerHTML = "";
+                    notesArray.forEach(note => createStickyNote(note));
+                } catch (error) {
+                    alert("Note load error: Invalid file format.");
+                    createStickyNote();
+                }
+            } else {
+                createStickyNote();
+            }
+        }
+
+        function saveNotes() {
+            const notes = document.getElementsByClassName("note");
+            const notesArray = Array.from(notes).map(note => ({
+                id: note.id,
+                content: note.querySelector(".content").innerHTML,
+                leftPercent: note.dataset.leftPercent || (parseFloat(note.style.left) / window.innerWidth * 100) || 50,
+                topPercent: note.dataset.topPercent || (parseFloat(note.style.top) / window.innerHeight * 100) || 50,
+                height: note.style.height || "300px",
+                width: note.style.width || "300px",
+                zIndex: note.style.zIndex || 1,
+                fontSize: note.dataset.fontSize || "15px",
+                fontColor: note.dataset.fontColor || "#000000"
+            }));
+            const data = {
+                notes: notesArray,
+                deletedNotes: deletedNotes,
+                noteId: noteId,
+                maxZIndex: maxZIndex
+            };
+
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const timestamp = `${year}${month}${day}_${hours}${minutes}${seconds}`;
+            const filename = `StickyNotes_${timestamp}.json`;
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function loadNotesFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    const container = document.getElementById("container");
+                    container.innerHTML = "";
+
+                    noteId = data.noteId || 0;
+                    maxZIndex = data.maxZIndex || 1;
+                    deletedNotes = data.deletedNotes || [];
+
+                    (data.notes || []).forEach(note => {
+                        note.leftPercent = Math.max(0, Math.min(note.leftPercent || 50, 100));
+                        note.topPercent = Math.max(0, Math.min(note.topPercent || 50, 100));
+                        createStickyNote(note);
+                    });
+                    saveNotesToLocalStorage();
+                } catch (error) {
+                    alert("Note load error: Invalid file format.");
+                    createStickyNote();
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        document.getElementById("settingsBtn").addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleSettingsMenu();
+        });
+
+        document.getElementById("saveBtn").addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const focusedContent = document.querySelector(".note .content:focus");
+            if (focusedContent) focusedContent.blur();
+            saveNotes();
+            toggleSettingsMenu();
+        });
+
+        document.getElementById("loadBtn").addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const focusedContent = document.querySelector(".note .content:focus");
+            if (focusedContent) focusedContent.blur();
+            document.getElementById("loadFile").click();
+            toggleSettingsMenu();
+        });
+
+        document.getElementById("resetBtn").addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const focusedContent = document.querySelector(".note .content:focus");
+            if (focusedContent) focusedContent.blur();
+            openResetConfirmation();
+            toggleSettingsMenu();
+        });
+
+        document.getElementById("addBtn").addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const focusedContent = document.querySelector(".note .content:focus");
+            if (focusedContent) focusedContent.blur();
+            createStickyNote();
+        });
+
+        document.getElementById("undoBtn").addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const focusedContent = document.querySelector(".note .content:focus");
+            if (focusedContent) focusedContent.blur();
+            undoDelete();
+        });
+
+        document.getElementById("darkModeToggle").addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const focusedContent = document.querySelector(".note .content:focus");
+            if (focusedContent) focusedContent.blur();
+            toggleDarkMode();
+        });
+
+        document.getElementById("fullscreenBtn").addEventListener("click", toggleFullscreen);
+        document.getElementById("fullscreenBtn").addEventListener("touchstart", (event) => {
+            event.preventDefault();
+            toggleFullscreen();
+        });
+
+        function toggleFullscreen() {
+            const fullscreenBtn = document.getElementById("fullscreenBtn");
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    fullscreenBtn.textContent = "✖";
+                }).catch(err => {});
+            } else {
+                document.exitFullscreen().then(() => {
+                    fullscreenBtn.textContent = "⛶";
+                }).catch(err => {});
+            }
+        }
+
+        document.addEventListener("fullscreenchange", () => {
+            const fullscreenBtn = document.getElementById("fullscreenBtn");
+            if (!document.fullscreenElement) {
+                fullscreenBtn.textContent = "⛶";
+            } else {
+                fullscreenBtn.textContent = "✖";
+            }
+        });
+
+        window.onload = () => {
+            loadDarkModeState();
+            loadNotesFromLocalStorage();
+        };
+    </script>
+</body>
+</html>
