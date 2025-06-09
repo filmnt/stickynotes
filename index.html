@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap">
+    <link rel="icon" type="image/gif" href="favicon.gif">
+    <title id="page-title">Sticky Notes</title>
+    <style>
+        body {
+            background-color:#faf8f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            overflow: hidden;
+            margin: 0;
+            touch-action: none;
+            transition: background-color 0.3s ease;
+        }
+
+        body.light-mode {
+            background-color: #faf8f8;
+        }
+
+        body.dark-mode {
+            background-color: #0f0f0f;
+        }
+
+        .sticky-container {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            pointer-events: none; 
+            z-index: 1; 
+        }
+
+        .sticky-note {
+            position: absolute;
+            background-color: #ffffcc;
+            width: 300px;
+            height: 300px;
+            min-width: 300px;
+            min-height: 80px;
+            max-width: 90vw;
+            max-height: 90vh;
+            font-size: 15px;
+            font-family: "Roboto Mono", monospace;
+            border-radius: 2px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            z-index: 2; 
+            touch-action: none;
+            pointer-events: auto;
+        }
+
+        .sticky-note .sticky-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #ffeb3b;
+            margin: 0;
+            padding: 5px 10px;
+            cursor: move;
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            touch-action: none;
+        }
+
+        .sticky-note .sticky-header .sticky-left-group {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            margin-left: -5px;
+        }
+
+        .sticky-note .sticky-header .sticky-delete {
+            margin-right: -5px;
+        }
+
+        .sticky-note .sticky-header .sticky-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .sticky-note .sticky-header button {
+            font-size: 14px;
+            padding: 4px 8px;
+            background-color: transparent;
+            color: #1a1a1a;
+            border: none;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .sticky-note .sticky-header button:hover {
+            color: #ff0000;
+        }
+
+        .sticky-note .sticky-header select {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 12px;
+            padding: 2px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            height: 24px;
+        }
+
+        .sticky-note .sticky-header input[type="color"] {
+            width: 18px;
+            height: 24px;
+            padding: 0;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .sticky-note .sticky-content {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 5px;
+            outline: none;
+            cursor: text;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            touch-action: pan-y pinch-zoom;
+        }
+
+        .sticky-note .sticky-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        .sticky-resize-handle {
+            position: absolute;
+            z-index: 2;
+            touch-action: none;
+            background-color: transparent;
+        }
+
+        .sticky-resize-handle.sticky-left {
+            left: -5px;
+            top: 0;
+            width: 10px;
+            height: 100%;
+            cursor: w-resize;
+        }
+
+        .sticky-resize-handle.sticky-right {
+            right: -5px;
+            top: 0;
+            width: 10px;
+            height: 100%;
+            cursor: e-resize;
+        }
+
+        .sticky-resize-handle.sticky-bottom {
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            cursor: s-resize;
+        }
+
+        .sticky-resize-handle.sticky-bottom-left {
+            bottom: -5px;
+            left: -5px;
+            width: 15px;
+            height: 15px;
+            cursor: sw-resize;
+        }
+
+        .sticky-resize-handle.sticky-bottom-right {
+            bottom: -5px;
+            right: -5px;
+            width: 15px;
+            height: 15px;
+            cursor: se-resize;
+        }
+
+        .sticky-bottom-left-buttons {
+            position: fixed;
+            bottom: 12px;
+            left: 60px;
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+        }
+
+        .sticky-bottom-left-buttons.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .sticky-bottom-right-buttons {
+            position: fixed;
+            bottom: 12px;
+            right: 12px;
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .sticky-bottom-left-buttons button,
+        .sticky-bottom-right-buttons button,
+        #settingsBtn {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 24px;
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            background-color: #000000;
+            color: #ffffff;
+            border: 2px solid #ffffff;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            position: relative;
+        }
+
+        .sticky-bottom-left-buttons button:hover,
+        .sticky-bottom-right-buttons button:hover,
+        #settingsBtn:hover {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        body.light-mode .sticky-bottom-left-buttons button,
+        body.light-mode .sticky-bottom-right-buttons button,
+        body.light-mode #settingsBtn {
+            background-color: #ffffff;
+            color: #000000;
+            border: 2px solid #000000;
+        }
+
+        body.light-mode .sticky-bottom-left-buttons button:hover,
+        body.light-mode .sticky-bottom-right-buttons button:hover,
+        body.light-mode #settingsBtn:hover {
+            background-color: #000000;
+            color: #ffffff;
+        }
+
+        #settingsBtn {
+            position: fixed;
+            bottom: 12px;
+            left: 12px;
+        }
+
+        .sticky-tooltip {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ffffff;
+            color: #000000;
+            border: 1px solid #000000;
+            padding: 4px 8px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 12px;
+            border-radius: 4px;
+            white-space: nowrap;
+            z-index: 101;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .sticky-bottom-left-buttons button:hover .sticky-tooltip,
+        .sticky-bottom-right-buttons button:hover .sticky-tooltip,
+        #settingsBtn:hover .sticky-tooltip {
+            opacity: 1;
+        }
+
+        body.dark-mode .sticky-tooltip {
+            background-color: #000000;
+            color: #ffffff;
+            border: 1px solid #ffffff;
+        }
+
+        @media (max-width: 768px) {
+            .sticky-note {
+                width: 200px;
+                height: 250px;
+                min-width: 200px;
+                font-size: 14px;
+            }
+
+            .sticky-bottom-left-buttons button,
+            .sticky-bottom-right-buttons button,
+            #settingsBtn {
+                width: 43.2px;
+                height: 43.2px;
+                font-size: 21.6px;
+            }
+
+            .sticky-bottom-left-buttons,
+            .sticky-bottom-right-buttons {
+                gap: 8px;
+            }
+
+            .sticky-bottom-left-buttons {
+                left: 55px;
+            }
+
+            .sticky-note .sticky-header button {
+                font-size: 12px;
+                padding: 4px 6px;
+            }
+
+            .sticky-note .sticky-header select {
+                font-size: 10px;
+                height: 20px;
+            }
+
+            .sticky-note .sticky-header input[type="color"] {
+                width: 15px;
+                height: 20px;
+            }
+
+            .sticky-resize-handle.sticky-left,
+            .sticky-resize-handle.sticky-right {
+                width: 12px;
+            }
+
+            .sticky-resize-handle.sticky-bottom {
+                height: 12px;
+            }
+
+            .sticky-resize-handle.sticky-bottom-left,
+            .sticky-resize-handle.sticky-bottom-right {
+                width: 18px;
+                height: 18px;
+            }
+
+            .sticky-tooltip {
+                font-size: 10px;
+                padding: 3px 6px;
+                top: -36px;
+            }
+
+            .sticky-bottom-left-buttons button.touched .sticky-tooltip,
+            .sticky-bottom-right-buttons button.touched .sticky-tooltip,
+            #settingsBtn.touched .sticky-tooltip {
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body class="dark-mode">
+    <div id="sticky-container" class="sticky-container"></div>
+
+    <button id="settingsBtn" data-tooltip-key="settings">⚙️</button>
+    <div class="sticky-bottom-left-buttons">
+        <button id="saveBtn" data-tooltip-key="save">💾</button>
+        <button id="loadBtn" data-tooltip-key="load">📂</button>
+        <button id="resetBtn" data-tooltip-key="reset">🗑️</button>
+    </div>
+
+    <div class="sticky-bottom-right-buttons">
+        <button id="fullscreenBtn" data-tooltip-key="fullscreen">⛶</button>
+        <button id="addBtn" data-tooltip-key="addNote">+</button>
+        <button id="undoBtn" data-tooltip-key="undo">↺</button>
+        <button id="darkModeToggle" data-tooltip-key="darkMode">
+            <span id="darkModeIcon" class="moon-icon">🌙</span>
+        </button>
+    </div>
+
+    <input type="file" id="loadFile" accept=".json" style="display: none;" onchange="loadNotesFromFile(event)">
+
+    <script>
+        const translations = {
+            en: {
+                pageTitle: "Sticky Notes",
+                settings: "Settings",
+                save: "Save",
+                load: "Load",
+                reset: "Reset All",
+                fullscreen: "Fullscreen",
+                addNote: "Add Note",
+                undo: "Undo",
+                darkMode: "Dark Mode",
+                lastNoteReset: "This is the last note. Would you like to reset all notes?",
+                resetConfirm: "Would you like to reset all notes?",
+                loadError: "Note load error: Invalid file format.",
+                saveFilePrefix: "StickyNotes"
+            },
+            ko: {
+                pageTitle: "스티커 메모",
+                settings: "설정",
+                save: "저장",
+                load: "불러오기",
+                reset: "모두 초기화",
+                fullscreen: "전체화면",
+                addNote: "노트 추가",
+                undo: "실행 취소",
+                darkMode: "다크 모드",
+                lastNoteReset: "마지막 노트입니다. 모든 노트를 초기화하시겠습니까?",
+                resetConfirm: "모든 노트를 초기화하시겠습니까?",
+                loadError: "노트 불러오기 오류: 잘못된 파일 형식입니다.",
+                saveFilePrefix: "스티커 메모"
+            },
+            ja: {
+                pageTitle: "付箋",
+                settings: "設定",
+                save: "保存",
+                load: "読み込む",
+                reset: "すべてリセット",
+                fullscreen: "フルスクリーン",
+                addNote: "ノートを追加",
+                undo: "元に戻す",
+                darkMode: "ダークモード",
+                lastNoteReset: "これが最後のノートです。すべてのノートをリセットしますか？",
+                resetConfirm: "すべてのノートをリセットしますか？",
+                loadError: "ノート読み込みエラー：無効なファイル形式です。",
+                saveFilePrefix: "付箋"
+            },
+            de: {
+                pageTitle: "Haftnotizen",
+                settings: "Einstellungen",
+                save: "Speichern",
+                load: "Laden",
+                reset: "Alles zurücksetzen",
+                fullscreen: "Vollbild",
+                addNote: "Notiz hinzufügen",
+                undo: "Rückgängig",
+                darkMode: "Dunkler Modus",
+                lastNoteReset: "Dies ist die letzte Notiz. Möchten Sie alle Notizen zurücksetzen?",
+                resetConfirm: "Möchten Sie alle Notizen zurücksetzen?",
+                loadError: "Fehler beim Laden der Notiz: Ungültiges Dateiformat.",
+                saveFilePrefix: "Haftnotizen"
+            },
+            es: {
+                pageTitle: "Notas Adhesivas",
+                settings: "Configuración",
+                save: "Guardar",
+                load: "Cargar",
+                reset: "Restablecer Todo",
+                fullscreen: "Pantalla Completa",
+                addNote: "Añadir Nota",
+                undo: "Deshacer",
+                darkMode: "Modo Oscuro",
+                lastNoteReset: "Esta es la última nota. ¿Desea restablecer todas las notas?",
+                resetConfirm: "¿Desea restablecer todas las notas?",
+                loadError: "Error al cargar la nota: Formato de archivo inválido.",
+                saveFilePrefix: "NotasAdesivas"
+            },
+            zh: {
+                pageTitle: "便笺",
+                settings: "设置",
+                save: "保存",
+                load: "加载",
+                reset: "全部重置",
+                fullscreen: "全屏",
+                addNote: "添加便笺",
+                undo: "撤销",
+                darkMode: "暗黑模式",
+                lastNoteReset: "这是最后一个便笺。是否要重置所有便笺？",
+                resetConfirm: "是否要重置所有便笺？",
+                loadError: "便笺加载错误：文件格式无效。",
+                saveFilePrefix: "便笺"
+            },
+            fr: {
+                pageTitle: "Notes Adhésives",
+                settings: "Paramètres",
+                save: "Enregistrer",
+                load: "Charger",
+                reset: "Tout réinitialiser",
+                fullscreen: "Plein écran",
+                addNote: "Ajouter une note",
+                undo: "Annuler",
+                darkMode: "Mode sombre",
+                lastNoteReset: "Ceci est la dernière note. Voulez-vous réinitialiser toutes les notes ?",
+                resetConfirm: "Voulez-vous réinitialiser toutes les notes ?",
+                loadError: "Erreur de chargement des notes : Format de fichier invalide.",
+                saveFilePrefix: "NotesAdhésives"
+            },
+            ru: {
+                pageTitle: "Стикеры",
+                settings: "Настройки",
+                save: "Сохранить",
+                load: "Загрузить",
+                reset: "Сбросить все",
+                fullscreen: "Полный экран",
+                addNote: "Добавить заметку",
+                undo: "Отменить",
+                darkMode: "Темный режим",
+                lastNoteReset: "Это последняя заметка. Хотите сбросить все заметки?",
+                resetConfirm: "Хотите сбросить все заметки?",
+                loadError: "Ошибка загрузки заметок: Неверный формат файла.",
+                saveFilePrefix: "Стикеры"
+            },
+            pt: {
+                pageTitle: "Notas Adesivas",
+                settings: "Configurações",
+                save: "Salvar",
+                load: "Carregar",
+                reset: "Redefinir Tudo",
+                fullscreen: "Tela Cheia",
+                addNote: "Adicionar Nota",
+                undo: "Desfazer",
+                darkMode: "Modo Escuro",
+                lastNoteReset: "Esta é a última nota. Deseja redefinir todas as notas?",
+                resetConfirm: "Deseja redefinir todas as notas?",
+                loadError: "Erro ao carregar nota: Formato de arquivo inválido.",
+                saveFilePrefix: "NotasAdesivas"
+            },
+            ar: {
+                pageTitle: "ملاحظات لاصقة",
+                settings: "الإعدادات",
+                save: "حفظ",
+                load: "تحميل",
+                reset: "إعادة تعيين الكل",
+                fullscreen: "شاشة كاملة",
+                addNote: "إضافة ملاحظة",
+                undo: "تراجع",
+                darkMode: "الوضع الداكن",
+                lastNoteReset: "هذه هي الملاحظة الأخيرة. هل ترغب في إعادة تعيين جميع الملاحظات؟",
+                resetConfirm: "هل ترغب في إعادة تعيين جميع الملاحظات؟",
+                loadError: "خطأ في تحميل الملاحظة: تنسيق الملف غير صالح.",
+                saveFilePrefix: "ملاحظات_لاصقة"
+            },
+            bn: {
+                pageTitle: "স্টিকি নোট",
+                settings: "সেটিংস",
+                save: "সংরক্ষণ",
+                load: "লোড",
+                reset: "সব রিসেট",
+                fullscreen: "পূর্ণ স্ক্রিন",
+                addNote: "নোট যোগ",
+                undo: "পূর্বাবস্থায় ফিরুন",
+                darkMode: "ডার্ক মোড",
+                lastNoteReset: "এটি শেষ নোট। আপনি কি সব নোট রিসেট করতে চান?",
+                resetConfirm: "আপনি কি সব নোট রিসেট করতে চান?",
+                loadError: "নোট লোড ত্রুটি: ফাইল ফরম্যাট অবৈধ।",
+                saveFilePrefix: "স্টিকি_নোট"
+            },
+            pa: {
+                pageTitle: "ਸਟਿੱਕੀ ਨੋਟਸ",
+                settings: "ਸੈਟਿੰਗਜ਼",
+                save: "ਸੰਭਾਲੋ",
+                load: "ਲੋਡ",
+                reset: "ਸਭ ਰੀਸੈਟ",
+                fullscreen: "ਪੂਰੀ ਸਕ੍ਰੀਨ",
+                addNote: "ਨੋਟ ਸ਼ਾਮਲ ਕਰੋ",
+                undo: "ਵਾਪਸ",
+                darkMode: "ਡਾਰਕ ਮੋਡ",
+                lastNoteReset: "ਇਹ ਆਖਰੀ ਨੋਟ ਹੈ। ਕੀ ਤੁਸੀਂ ਸਾਰੇ ਨੋਟਸ ਰੀਸੈਟ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?",
+                resetConfirm: "ਕੀ ਤੁਸੀਂ ਸਾਰੇ ਨੋਟਸ ਰੀਸੈਟ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?",
+                loadError: "ਨੋਟ ਲੋਡ ਗਲਤੀ: ਫਾਈਲ ਫਾਰਮੈਟ ਅਵੈਧ ਹੈ।",
+                saveFilePrefix: "ਸਟਿੱਕੀ_ਨੋਟਸ"
+            },
+            hi: {
+                pageTitle: "स्टिकी नोट्स",
+                settings: "सेटिंग्स",
+                save: "सहेजें",
+                load: "लोड करें",
+                reset: "सभी रीसेट करें",
+                fullscreen: "पूर्ण स्क्रीन",
+                addNote: "नोट जोड़ें",
+                undo: "पूर्ववत करें",
+                darkMode: "डार्क मोड",
+                lastNoteReset: "यह अंतिम नोट है। क्या आप सभी नोट्स रीसेट करना चाहते हैं?",
+                resetConfirm: "क्या आप सभी नोट्स रीसेट करना चाहते हैं?",
+                loadError: "नोट लोड त्रुटि: अमान्य फ़ाइल प्रारूप।",
+                saveFilePrefix: "स्टिकी_नोट्स"
+            },
+            ms: {
+                pageTitle: "Nota Melekat",
+                settings: "Tetapan",
+                save: "Simpan",
+                load: "Muat",
+                reset: "Set Semula Semua",
+                fullscreen: "Skrin Penuh",
+                addNote: "Tambah Nota",
+                undo: "Buat Asal",
+                darkMode: "Mod Gelap",
+                lastNoteReset: "Ini adalah nota terakhir. Adakah anda ingin menetapkan semula semua nota?",
+                resetConfirm: "Adakah anda ingin menetapkan semula semua nota?",
+                loadError: "Ralat muat nota: Format fail tidak sah.",
+                saveFilePrefix: "NotaMelekat"
+            },
+            it: {
+                pageTitle: "Note Adesive",
+                settings: "Impostazioni",
+                save: "Salva",
+                load: "Carica",
+                reset: "Ripristina Tutto",
+                fullscreen: "Schermo Intero",
+                addNote: "Aggiungi Nota",
+                undo: "Annulla",
+                darkMode: "Modalità Scura",
+                lastNoteReset: "Questa è l'ultima nota. Vuoi ripristinare tutte le note?",
+                resetConfirm: "Vuoi ripristinare tutte le note?",
+                loadError: "Errore di caricamento nota: Formato file non valido.",
+                saveFilePrefix: "NoteAdesive"
+            },
+            tr: {
+                pageTitle: "Yapışkan Notlar",
+                settings: "Ayarlar",
+                save: "Kaydet",
+                load: "Yükle",
+                reset: "Tümünü Sıfırla",
+                fullscreen: "Tam Ekran",
+                addNote: "Not Ekle",
+                undo: "Geri Al",
+                darkMode: "Karanlık Mod",
+                lastNoteReset: "Bu son not. Tüm notları sıfırlamak ister misiniz?",
+                resetConfirm: "Tüm notları sıfırlamak ister misiniz?",
+                loadError: "Not yükleme hatası: Geçersiz dosya formatı.",
+                saveFilePrefix: "YapışkanNotlar"
+            },
+            ta: {
+                pageTitle: "ஒட்டு குறிப்புகள்",
+                settings: "அமைப்புகள்",
+                save: "சேமி",
+                load: "ஏற்று",
+                reset: "அனைத்தையும் மீட்டமை",
+                fullscreen: "முழுத்திரை",
+                addNote: "குறிப்பு சேர்",
+                undo: "செயல்தவிர்",
+                darkMode: "இருண்ட பயன்முறை",
+                lastNoteReset: "இது கடைசி குறிப்பு. அனைத்து குறிப்புகளையும் மீட்டமைக்க விரும்புகிறீர்களா?",
+                resetConfirm: "அனைத்து குறிப்புகளையும் மீட்டமைக்க விரும்புகிறீர்களா?",
+                loadError: "குறிப்பு ஏற்றல் பிழை: தவறான கோப்பு வடிவம்.",
+                saveFilePrefix: "ஒட்டு_குறிப்புகள்"
+            },
+            te: {
+                pageTitle: "స్టికీ నోట్స్",
+                settings: "సెట్టింగ్స్",
+                save: "సేవ్",
+                load: "లోడ్",
+                reset: "అన్నీ రీసెట్ చేయండి",
+                fullscreen: "పూర్తి స్క్రీన్",
+                addNote: "నోట్ జోడించండి",
+                undo: "రద్దు చేయండి",
+                darkMode: "డార్క్ మోడ్",
+                lastNoteReset: "ఇది చివరి నోట్. మీరు అన్ని నోట్స్‌ని రీసెట్ చేయాలనుకుంటున్నారా?",
+                resetConfirm: "మీరు అన్ని నోట్స్‌ని రీసెట్ చేయాలనుకుంటున్నారా?",
+                loadError: "నోట్ లోడ్ లోపం: చెల్లని ఫైల్ ఫార్మాట్.",
+                saveFilePrefix: "స్టికీ_నోట్స్"
+            },
+            mr: {
+                pageTitle: "चिपकणारे नोट्स",
+                settings: "सेटिंग्ज",
+                save: "जतन करा",
+                load: "लोड करा",
+                reset: "सर्व रीसेट करा",
+                fullscreen: "पूर्ण स्क्रीन",
+                addNote: "नोट जोडा",
+                undo: "पूर्ववत करा",
+                darkMode: "डार्क मोड",
+                lastNoteReset: "ही शेवटची नोट आहे. तुम्ही सर्व नोट्स रीसेट करू इच्छिता का?",
+                resetConfirm: "तुम्ही सर्व नोट्स रीसेट करू इच्छिता का?",
+                loadError: "नोट लोडिंग त्रुटी: अवैध फाइल स्वरूप.",
+                saveFilePrefix: "चिपकणारे_नोट्स"
+            },
+            ur: {
+                pageTitle: "اسٹیکی نوٹس",
+                settings: "ترتیبات",
+                save: "محفوظ کریں",
+                load: "لوڈ کریں",
+                reset: "سب کو ری سیٹ کریں",
+                fullscreen: "مکمل اسکرین",
+                addNote: "نوٹ شامل کریں",
+                undo: "واپس لیں",
+                darkMode: "ڈارک موڈ",
+                lastNoteReset: "یہ آخری نوٹ ہے۔ کیا آپ تمام نوٹس کو ری سیٹ کرنا چاہتے ہیں؟",
+                resetConfirm: "کیا آپ تمام نوٹس کو ری سیٹ کرنا چاہتے ہیں؟",
+                loadError: "نوٹ لوڈنگ میں خرابی: ناجائز فائل فارمیٹ۔",
+                saveFilePrefix: "اسٹیکی_نوٹس"
+            },
+            gu: {
+                pageTitle: "સ્ટીકી નોટ્સ",
+                settings: "સેટિંગ્સ",
+                save: "સાચવો",
+                load: "લોડ કરો",
+                reset: "બધું રીસેટ કરો",
+                fullscreen: "પૂર્ણ સ્ક્રીન",
+                addNote: "નોટ ઉમેરો",
+                undo: "પૂર્વવત્ કરો",
+                darkMode: "ડાર્ક મોડ",
+                lastNoteReset: "આ છેલ્લી નોટ છે. શું તમે બધી નોট્સ રીસેટ કરવા માંગો છો?",
+                resetConfirm: "શું તમે બધી નોٹ્સ રીસેટ કરવા માંગો છો?",
+                loadError: "નોટ લોડિંગ ભૂલ: અમાન્ય ફાઇલ ફોર્મેટ.",
+                saveFilePrefix: "સ્ટીકી_નોટ્સ"
+            }
+        };
+
+function getLanguage() {
+    const lang = navigator.language.split('-')[0];
+    return translations[lang] ? lang : 'en';
+}
+
+function applyTranslations() {
+    const lang = getLanguage();
+    const t = translations[lang];
+
+    document.getElementById('page-title').textContent = t.pageTitle;
+    document.querySelectorAll('[data-tooltip-key]').forEach(button => {
+        const key = button.getAttribute('data-tooltip-key');
+        button.setAttribute('data-tooltip', t[key]);
+        const tooltip = button.querySelector('.sticky-tooltip');
+        if (tooltip) {
+            tooltip.textContent = t[key];
+        }
+    });
+}
+
+let noteId = 0;
+let deletedNotes = [];
+let maxZIndex = 1;
+
+function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+function saveDarkModeState() {
+    const isDarkMode = document.body.classList.contains("dark-mode");
+    localStorage.setItem("darkMode", isDarkMode);
+}
+
+function loadDarkModeState() {
+    const savedDarkMode = localStorage.getItem("darkMode");
+    if (savedDarkMode === "false") {
+        document.body.classList.add("light-mode");
+        document.body.classList.remove("dark-mode");
+    } else {
+        document.body.classList.add("dark-mode");
+        document.body.classList.remove("light-mode");
+    }
+    updateDarkModeIcon();
+}
+
+function updateDarkModeIcon() {
+    const darkModeIcon = document.getElementById("darkModeIcon");
+    if (document.body.classList.contains("dark-mode")) {
+        darkModeIcon.textContent = "🌙";
+    } else {
+        darkModeIcon.textContent = "☀️";
+    }
+}
+
+function toggleDarkMode() {
+    document.body.classList.toggle("dark-mode");
+    document.body.classList.toggle("light-mode");
+    saveDarkModeState();
+    updateDarkModeIcon();
+}
+
+function toggleSettingsMenu() {
+    const menu = document.querySelector(".sticky-bottom-left-buttons");
+    menu.classList.toggle("show");
+}
+
+function bringToFront(note) {
+    maxZIndex++;
+    note.style.zIndex = maxZIndex;
+    saveNotesToLocalStorage();
+}
+
+function createStickyNote(savedNote = null) {
+    const container = document.getElementById("sticky-container");
+    const note = document.createElement("div");
+    note.className = "sticky-note";
+    let currentNoteId;
+
+    if (savedNote && savedNote.id) {
+        currentNoteId = savedNote.id.split('_')[1];
+        note.id = savedNote.id;
+        noteId = Math.max(noteId, parseInt(currentNoteId) + 1);
+    } else {
+        currentNoteId = noteId.toString();
+        note.id = "note_" + currentNoteId;
+        noteId++;
+    }
+
+    function positionNoteInCenter() {
+        const noteWidth = 300;
+        const noteHeight = 300;
+        const containerWidth = window.innerWidth;
+        const containerHeight = window.innerHeight;
+
+        const leftPercent = ((containerWidth - noteWidth) / 2 / containerWidth) * 100;
+        const topPercent = ((containerHeight - noteHeight) / 2 / containerHeight) * 100;
+
+        note.style.left = `${leftPercent}%`;
+        note.style.top = `${topPercent}%`;
+        note.dataset.leftPercent = leftPercent;
+        note.dataset.topPercent = topPercent;
+    }
+
+    if (savedNote) {
+        note.style.left = `${savedNote.leftPercent}%`;
+        note.style.top = `${savedNote.topPercent}%`;
+        note.dataset.leftPercent = savedNote.leftPercent;
+        note.dataset.topPercent = savedNote.topPercent;
+        note.style.width = savedNote.width || "300px";
+        note.style.height = savedNote.height || "300px";
+        note.style.zIndex = savedNote.zIndex || maxZIndex;
+        note.dataset.fontSize = savedNote.fontSize || "15px";
+        note.dataset.fontColor = savedNote.fontColor || "#000000";
+    } else {
+        positionNoteInCenter();
+        note.dataset.fontSize = "15px";
+        note.dataset.fontColor = "#000000";
+        note.style.zIndex = maxZIndex;
+        note.style.width = "300px";
+    }
+
+    note.innerHTML = `
+        <div class="sticky-header">
+            <div class="sticky-left-group">
+                <button class="sticky-add-note">+</button>
+                <div class="sticky-toolbar">
+                    <select class="sticky-font-size">
+                        <option value="10px">10px</option>
+                        <option value="12px">12px</option>
+                        <option value="15px" selected>15px</option>
+                        <option value="18px">18px</option>
+                        <option value="24px">24px</option>
+                        <option value="30px">30px</option>
+                        <option value="36px">36px</option>
+                        <option value="42px">42px</option>
+                        <option value="50px">50px</option>
+                    </select>
+                    <input type="color" class="sticky-font-color" value="${savedNote ? savedNote.fontColor || '#000000' : '#000000'}">
+                    <button class="sticky-bold">B</button>
+                    <button class="sticky-italic">I</button>
+                    <button class="sticky-underline">U</button>
+                    <button class="sticky-strikethrough">S</button>
+                </div>
+            </div>
+            <button class="sticky-delete" data-id="${note.id}">✖</button>
+        </div>
+        <div class="sticky-content" contenteditable="true">${savedNote ? savedNote.content || "" : ""}</div>
+    `;
+
+    container.appendChild(note);
+
+    const header = note.querySelector(".sticky-header");
+    header.addEventListener("mousedown", startDrag);
+    header.addEventListener("touchstart", startDrag, { passive: false });
+
+    const content = note.querySelector(".sticky-content");
+    const fontSizeSelect = note.querySelector(".sticky-font-size");
+    const fontColorInput = note.querySelector(".sticky-font-color");
+
+    if (savedNote) {
+        fontSizeSelect.value = savedNote.fontSize || "15px";
+        fontColorInput.value = savedNote.fontColor || "#000000";
+        content.style.fontSize = savedNote.fontSize || "15px";
+        if (savedNote.fontColor) content.style.color = savedNote.fontColor;
+    } else {
+        content.style.fontSize = note.dataset.fontSize;
+    }
+
+    content.addEventListener("input", (e) => {
+        if (e.isComposing || e.inputType === "insertCompositionText") {
+            return;
+        }
+        debounce(saveNotesToLocalStorage, 500)();
+    });
+
+    content.addEventListener("compositionend", () => {
+        debounce(saveNotesToLocalStorage, 500)();
+    });
+
+    content.addEventListener("focus", () => bringToFront(note));
+
+    content.addEventListener("paste", (e) => {
+        e.preventDefault();
+        const clipboardData = e.clipboardData;
+        const textData = clipboardData.getData("text/plain");
+        const selection = window.getSelection();
+        if (selection.rangeCount) {
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(document.createTextNode(textData));
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+        debounce(saveNotesToLocalStorage, 500)();
+    });
+
+    content.addEventListener("keydown", (e) => {
+        if (e.isComposing || e.keyCode === 229) {
+            return;
+        }
+        if (document.activeElement !== content) {
+            return;
+        }
+        e.stopPropagation();
+        if (e.key === "Tab") {
+            e.preventDefault();
+            const selection = window.getSelection();
+            if (selection.rangeCount) {
+                const range = selection.getRangeAt(0);
+                const textNode = document.createTextNode("  ");
+                range.insertNode(textNode);
+                range.setStartAfter(textNode);
+                range.setEndAfter(textNode);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+            debounce(saveNotesToLocalStorage, 500)();
+            return;
+        }
+        if (e.ctrlKey || e.metaKey) {
+            const selection = window.getSelection();
+            if (selection.rangeCount) {
+                if (e.key === "z" || e.key === "Z") {
+                    e.preventDefault();
+                    document.execCommand("undo", false, null);
+                    debounce(saveNotesToLocalStorage, 500)();
+                    return;
+                }
+                if (e.key === "b" || e.key === "B") {
+                    e.preventDefault();
+                    document.execCommand("bold", false, null);
+                    debounce(saveNotesToLocalStorage, 500)();
+                    return;
+                }
+                if (e.key === "i" || e.key === "I") {
+                    e.preventDefault();
+                    document.execCommand("italic", false, null);
+                    debounce(saveNotesToLocalStorage, 500)();
+                    return;
+                }
+                if (e.key === "u" || e.key === "U") {
+                    e.preventDefault();
+                    document.execCommand("underline", false, null);
+                    debounce(saveNotesToLocalStorage, 500)();
+                    return;
+                }
+            }
+            return;
+        }
+    });
+
+    const leftResizeHandle = document.createElement("div");
+    leftResizeHandle.className = "sticky-resize-handle sticky-left";
+    note.appendChild(leftResizeHandle);
+    leftResizeHandle.addEventListener("mousedown", startResize);
+    leftResizeHandle.addEventListener("touchstart", startResize, { passive: false });
+
+    const rightResizeHandle = document.createElement("div");
+    rightResizeHandle.className = "sticky-resize-handle sticky-right";
+    note.appendChild(rightResizeHandle);
+    rightResizeHandle.addEventListener("mousedown", startResize);
+    rightResizeHandle.addEventListener("touchstart", startResize, { passive: false });
+
+    const bottomResizeHandle = document.createElement("div");
+    bottomResizeHandle.className = "sticky-resize-handle sticky-bottom";
+    note.appendChild(bottomResizeHandle);
+    bottomResizeHandle.addEventListener("mousedown", startResize);
+    bottomResizeHandle.addEventListener("touchstart", startResize, { passive: false });
+
+    const bottomLeftResizeHandle = document.createElement("div");
+    bottomLeftResizeHandle.className = "sticky-resize-handle sticky-bottom-left";
+    note.appendChild(bottomLeftResizeHandle);
+    bottomLeftResizeHandle.addEventListener("mousedown", startResize);
+    bottomLeftResizeHandle.addEventListener("touchstart", startResize, { passive: false });
+
+    const bottomRightResizeHandle = document.createElement("div");
+    bottomRightResizeHandle.className = "sticky-resize-handle sticky-bottom-right";
+    note.appendChild(bottomRightResizeHandle);
+    bottomRightResizeHandle.addEventListener("mousedown", startResize);
+    bottomRightResizeHandle.addEventListener("touchstart", startResize, { passive: false });
+
+    fontSizeSelect.addEventListener("change", (e) => {
+        note.dataset.fontSize = e.target.value;
+        content.style.fontSize = note.dataset.fontSize;
+        const spans = content.querySelectorAll("span[style*='font-size']");
+        spans.forEach(span => {
+            span.style.fontSize = '';
+            if (!span.getAttribute('style')) span.removeAttribute('style');
+        });
+        content.focus();
+        saveNotesToLocalStorage();
+    });
+
+    fontColorInput.addEventListener("input", (e) => {
+        content.style.color = e.target.value;
+        note.dataset.fontColor = e.target.value;
+        const spans = content.querySelectorAll("span[style*='color']");
+        spans.forEach(span => {
+            span.style.color = '';
+            if (!span.getAttribute('style')) span.removeAttribute('style');
+        });
+        content.focus();
+        saveNotesToLocalStorage();
+    });
+
+    const applyStyleToSelection = (button, command) => {
+        button.addEventListener("click", () => {
+            const selection = window.getSelection();
+            if (selection.rangeCount && !selection.isCollapsed) {
+                document.execCommand(command, false, null);
+            }
+            content.focus();
+            saveNotesToLocalStorage();
+        });
+    };
+
+    applyStyleToSelection(note.querySelector(".sticky-bold"), "bold");
+    applyStyleToSelection(note.querySelector(".sticky-italic"), "italic");
+    applyStyleToSelection(note.querySelector(".sticky-underline"), "underline");
+    applyStyleToSelection(note.querySelector(".sticky-strikethrough"), "strikeThrough");
+
+    note.querySelector(".sticky-add-note").addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        content.blur();
+        createStickyNote();
+    });
+
+    note.querySelector(".sticky-delete").addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        content.blur();
+        const noteIdToDelete = event.currentTarget.getAttribute("data-id");
+        deleteStickyNote(noteIdToDelete);
+    });
+
+    saveNotesToLocalStorage();
+}
+
+let isDragging = false;
+let isResizing = false;
+let currentNote = null;
+let initialWidth = 0;
+let initialHeight = 0;
+let initialX = 0;
+let initialY = 0;
+let initialLeft = 0;
+
+function startResize(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    isResizing = true;
+    currentNote = event.target.closest(".sticky-note");
+    bringToFront(currentNote);
+
+    initialWidth = parseFloat(getComputedStyle(currentNote).width);
+    initialHeight = parseFloat(getComputedStyle(currentNote).height);
+    initialLeft = parseFloat(currentNote.style.left) || (currentNote.offsetLeft / window.innerWidth * 100);
+
+    if (event.type === "touchstart") {
+        const touch = event.touches[0];
+        initialX = touch.clientX;
+        initialY = touch.clientY;
+    } else {
+        initialX = event.clientX;
+        initialY = event.clientY;
+    }
+
+    if (event.target.classList.contains("sticky-bottom-left")) {
+        currentNote.dataset.resizeSide = "sticky-bottom-left";
+    } else if (event.target.classList.contains("sticky-bottom-right")) {
+        currentNote.dataset.resizeSide = "sticky-bottom-right";
+    } else if (event.target.classList.contains("sticky-left")) {
+        currentNote.dataset.resizeSide = "sticky-left";
+    } else if (event.target.classList.contains("sticky-right")) {
+        currentNote.dataset.resizeSide = "sticky-right";
+    } else if (event.target.classList.contains("sticky-bottom")) {
+        currentNote.dataset.resizeSide = "sticky-bottom";
+    }
+
+    document.addEventListener("mousemove", resizeNote);
+    document.addEventListener("mouseup", stopResize);
+    document.addEventListener("touchmove", resizeNote, { passive: false });
+    document.addEventListener("touchend", stopResize);
+}
+
+function resizeNote(event) {
+    if (!isResizing || !currentNote) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    let deltaX, deltaY;
+    if (event.type === "touchmove") {
+        const touch = event.touches[0];
+        deltaX = touch.clientX - initialX;
+        deltaY = touch.clientY - initialY;
+    } else {
+        deltaX = event.clientX - initialX;
+        deltaY = event.clientY - initialY;
+    }
+
+    let newWidth, newHeight, newLeftPercent;
+    const resizeSide = currentNote.dataset.resizeSide;
+    const minWidth = 300;
+    const minHeight = 80;
+    const maxWidth = window.innerWidth * 0.9;
+    const maxHeight = window.innerHeight * 0.9;
+
+    if (resizeSide === "sticky-bottom-left") {
+        newWidth = Math.max(minWidth, Math.min(initialWidth - deltaX, maxWidth));
+        newHeight = Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight));
+        const newLeft = initialLeft + (initialWidth - newWidth) / window.innerWidth * 100;
+        newLeftPercent = Math.max(0, Math.min(newLeft, 100 - (newWidth / window.innerWidth * 100)));
+        currentNote.style.left = `${newLeftPercent}%`;
+        currentNote.style.width = `${newWidth}px`;
+        currentNote.style.height = `${newHeight}px`;
+        currentNote.dataset.leftPercent = newLeftPercent;
+    } else if (resizeSide === "sticky-bottom-right") {
+        newWidth = Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth));
+        newHeight = Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight));
+        currentNote.style.width = `${newWidth}px`;
+        currentNote.style.height = `${newHeight}px`;
+    } else if (resizeSide === "sticky-left") {
+        newWidth = Math.max(minWidth, Math.min(initialWidth - deltaX, maxWidth));
+        const newLeft = initialLeft + (initialWidth - newWidth) / window.innerWidth * 100;
+        newLeftPercent = Math.max(0, Math.min(newLeft, 100 - (newWidth / window.innerWidth * 100)));
+        currentNote.style.left = `${newLeftPercent}%`;
+        currentNote.style.width = `${newWidth}px`;
+        currentNote.dataset.leftPercent = newLeftPercent;
+    } else if (resizeSide === "sticky-right") {
+        newWidth = Math.max(minWidth, Math.min(initialWidth + deltaX, maxWidth));
+        currentNote.style.width = `${newWidth}px`;
+    } else if (resizeSide === "sticky-bottom") {
+        newHeight = Math.max(minHeight, Math.min(initialHeight + deltaY, maxHeight));
+        currentNote.style.height = `${newHeight}px`;
+    }
+
+    saveNotesToLocalStorage();
+}
+
+function stopResize() {
+    isResizing = false;
+    currentNote = null;
+    document.removeEventListener("mousemove", resizeNote);
+    document.removeEventListener("mouseup", stopResize);
+    document.removeEventListener("touchmove", resizeNote);
+    document.removeEventListener("touchend", stopResize);
+    saveNotesToLocalStorage();
+}
+
+function startDrag(event) {
+    const header = event.target.closest(".sticky-header");
+    if (!header || event.target.tagName === "BUTTON" || event.target.tagName === "SELECT" || event.target.tagName === "INPUT") return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    isDragging = true;
+    const note = header.closest(".sticky-note");
+    bringToFront(note);
+
+    const rect = note.getBoundingClientRect();
+    let offsetX, offsetY;
+
+    if (event.type === "touchstart") {
+        const touch = event.touches[0];
+        offsetX = touch.clientX - rect.left;
+        offsetY = touch.clientY - rect.top;
+    } else {
+        offsetX = event.clientX - rect.left;
+        offsetY = event.clientY - rect.top;
+    }
+
+    function dragNote(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isDragging) return;
+
+        const containerWidth = window.innerWidth;
+        const containerHeight = window.innerHeight;
+        let newNoteX, newNoteY;
+
+        if (event.type === "touchmove") {
+            const touch = event.touches[0];
+            newNoteX = touch.clientX - offsetX;
+            newNoteY = touch.clientY - offsetY;
+        } else {
+            newNoteX = event.clientX - offsetX;
+            newNoteY = event.clientY - offsetY;
+        }
+
+        let leftPercent = (newNoteX / containerWidth) * 100;
+        let topPercent = (newNoteY / containerHeight) * 100;
+        leftPercent = Math.max(0, Math.min(leftPercent, 100 - (note.offsetWidth / containerWidth) * 100));
+        topPercent = Math.max(0, Math.min(topPercent, 100 - (note.offsetHeight / containerHeight) * 100));
+
+        note.style.left = `${leftPercent}%`;
+        note.style.top = `${topPercent}%`;
+        note.dataset.leftPercent = leftPercent;
+        note.dataset.topPercent = topPercent;
+    }
+
+    function stopDrag() {
+        isDragging = false;
+        document.removeEventListener("mousemove", dragNote);
+        document.removeEventListener("mouseup", stopDrag);
+        document.removeEventListener("touchmove", dragNote);
+        document.removeEventListener("touchend", stopDrag);
+        saveNotesToLocalStorage();
+    }
+
+    document.addEventListener("mousemove", dragNote);
+    document.addEventListener("mouseup", stopDrag);
+    document.addEventListener("touchmove", dragNote, { passive: false });
+    document.addEventListener("touchend", stopDrag);
+}
+
+function deleteStickyNote(noteId) {
+    const note = document.getElementById(noteId);
+    if (!note) return;
+
+    const container = document.getElementById("sticky-container");
+    const notes = container.getElementsByClassName("sticky-note");
+    const lang = getLanguage();
+    const t = translations[lang];
+
+    if (notes.length === 1) {
+        if (confirm(t.lastNoteReset)) {
+            resetNotes();
+        }
+    } else {
+        deletedNotes.push({
+            id: note.id,
+            content: note.querySelector(".sticky-content").innerHTML,
+            leftPercent: note.dataset.leftPercent || (parseFloat(note.style.left) / window.innerWidth * 100) || 50,
+            topPercent: note.dataset.topPercent || (parseFloat(note.style.top) / window.innerHeight * 100) || 50,
+            height: note.style.height || "300px",
+            width: note.style.width || "300px",
+            zIndex: note.style.zIndex || 1,
+            fontSize: note.dataset.fontSize || "15px",
+            fontColor: note.dataset.fontColor || "#000000"
+        });
+        note.remove();
+        saveNotesToLocalStorage();
+    }
+}
+
+function undoDelete() {
+    if (deletedNotes.length === 0) return;
+
+    const deletedNote = deletedNotes.pop();
+    createStickyNote(deletedNote);
+}
+
+function openResetConfirmation() {
+    const lang = getLanguage();
+    const t = translations[lang];
+    if (confirm(t.resetConfirm)) {
+        resetNotes();
+    }
+}
+
+function resetNotes() {
+    const container = document.getElementById("sticky-container");
+    container.innerHTML = "";
+    noteId = 0;
+    deletedNotes = [];
+    maxZIndex = 1;
+    localStorage.removeItem("stickyNotes");
+    createStickyNote();
+    saveNotesToLocalStorage();
+}
+
+function saveNotes() {
+    const notes = document.getElementsByClassName("sticky-note");
+    const notesArray = Array.from(notes).map(note => ({
+        id: note.id,
+        content: note.querySelector(".sticky-content").innerHTML,
+        leftPercent: note.dataset.leftPercent || (parseFloat(note.style.left) / window.innerWidth * 100) || 50,
+        topPercent: note.dataset.topPercent || (parseFloat(note.style.top) / window.innerHeight * 100) || 50,
+        height: note.style.height || "300px",
+        width: note.style.width || "300px",
+        zIndex: note.style.zIndex || 1,
+        fontSize: note.dataset.fontSize || "15px",
+        fontColor: note.dataset.fontColor || "#000000"
+    }));
+    const data = {
+        notes: notesArray,
+        deletedNotes: deletedNotes,
+        noteId: noteId,
+        maxZIndex: maxZIndex
+    };
+
+    const lang = getLanguage();
+    const t = translations[lang];
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const timestamp = `${year}${month}${day}_${hours}${minutes}${seconds}`;
+    const filename = `${t.saveFilePrefix}_${timestamp}.json`;
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function loadNotesFromFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            const container = document.getElementById("sticky-container");
+            container.innerHTML = "";
+
+            noteId = data.noteId || 0;
+            maxZIndex = data.maxZIndex || 1;
+            deletedNotes = data.deletedNotes || [];
+
+            (data.notes || []).forEach(note => {
+                note.leftPercent = Math.max(0, Math.min(note.leftPercent || 50, 100));
+                note.topPercent = Math.max(0, Math.min(note.topPercent || 50, 100));
+                createStickyNote(note);
+            });
+            saveNotesToLocalStorage();
+        } catch (error) {
+            const lang = getLanguage();
+            const t = translations[lang];
+            alert(t.loadError);
+            createStickyNote();
+        }
+    };
+    reader.readAsText(file);
+}
+
+function saveNotesToLocalStorage() {
+    const notes = document.getElementsByClassName("sticky-note");
+    const notesArray = Array.from(notes).map(note => ({
+        id: note.id,
+        content: note.querySelector(".sticky-content").innerHTML,
+        leftPercent: note.dataset.leftPercent || (parseFloat(note.style.left) / window.innerWidth * 100) || 50,
+        topPercent: note.dataset.topPercent || (parseFloat(note.style.top) / window.innerHeight * 100) || 50,
+        height: note.style.height || "300px",
+        width: note.style.width || "300px",
+        zIndex: note.style.zIndex || 1,
+        fontSize: note.dataset.fontSize || "15px",
+        fontColor: note.dataset.fontColor || "#000000"
+    }));
+    const data = {
+        notes: notesArray,
+        deletedNotes: deletedNotes,
+        noteId: noteId,
+        maxZIndex: maxZIndex
+    };
+    localStorage.setItem("stickyNotes", JSON.stringify(data));
+}
+
+function loadNotesFromLocalStorage() {
+    const savedNotes = localStorage.getItem("stickyNotes");
+    if (savedNotes) {
+        try {
+            const data = JSON.parse(savedNotes);
+            const container = document.getElementById("sticky-container");
+            container.innerHTML = "";
+            noteId = data.noteId || 0;
+            maxZIndex = data.maxZIndex || 1;
+            deletedNotes = data.deletedNotes || [];
+            (data.notes || []).forEach(note => {
+                note.leftPercent = Math.max(0, Math.min(note.leftPercent || 50, 100));
+                note.topPercent = Math.max(0, Math.min(note.topPercent || 50, 100));
+                createStickyNote(note);
+            });
+        } catch (error) {
+            const lang = getLanguage();
+            const t = translations[lang];
+            alert(t.loadError);
+            createStickyNote();
+        }
+    } else {
+        createStickyNote();
+    }
+}
+
+function setupTooltips() {
+    const buttons = document.querySelectorAll('.sticky-bottom-left-buttons button, .sticky-bottom-right-buttons button, #settingsBtn');
+    const isMobile = window.innerWidth <= 768;
+
+    buttons.forEach(button => {
+        const key = button.getAttribute('data-tooltip-key');
+        const lang = getLanguage();
+        const tooltipText = translations[lang][key];
+        if (tooltipText) {
+            const tooltip = document.createElement('span');
+            tooltip.className = 'sticky-tooltip';
+            tooltip.textContent = tooltipText;
+            button.appendChild(tooltip);
+
+            if (isMobile) {
+                button.addEventListener('touchstart', (e) => {
+                    button.classList.add('touched');
+                }, { passive: true });
+
+                button.addEventListener('touchend', () => {
+                    button.classList.remove('touched');
+                }, { passive: true });
+            }
+        }
+    });
+
+    document.addEventListener('touchstart', (e) => {
+        if (!e.target.closest('.sticky-bottom-left-buttons button, .sticky-bottom-right-buttons button, #settingsBtn')) {
+            buttons.forEach(button => button.classList.remove('touched'));
+        }
+    }, { passive: true });
+}
+
+function handleButtonClick(id, action) {
+    const button = document.getElementById(id);
+    button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const focusedContent = document.querySelector(".sticky-note .sticky-content:focus");
+        if (focusedContent) focusedContent.blur();
+        action();
+    });
+
+    button.addEventListener('touchend', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const focusedContent = document.querySelector(".sticky-note .sticky-content:focus");
+        if (focusedContent) focusedContent.blur();
+        action();
+    }, { passive: false });
+}
+
+handleButtonClick("settingsBtn", toggleSettingsMenu);
+handleButtonClick("saveBtn", () => {
+    saveNotes();
+    toggleSettingsMenu();
+});
+handleButtonClick("loadBtn", () => {
+    document.getElementById("loadFile").click();
+    toggleSettingsMenu();
+});
+handleButtonClick("resetBtn", () => {
+    openResetConfirmation();
+    toggleSettingsMenu();
+});
+handleButtonClick("addBtn", createStickyNote);
+handleButtonClick("undoBtn", undoDelete);
+handleButtonClick("darkModeToggle", toggleDarkMode);
+
+document.getElementById("fullscreenBtn").addEventListener("click", toggleFullscreen);
+document.getElementById("fullscreenBtn").addEventListener("touchend", (event) => {
+    event.preventDefault();
+    toggleFullscreen();
+}, { passive: false });
+
+function toggleFullscreen() {
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+            fullscreenBtn.textContent = "✖";
+        }).catch(err => {});
+    } else {
+        document.exitFullscreen().then(() => {
+            fullscreenBtn.textContent = "⛶";
+        }).catch(err => {});
+    }
+}
+
+document.addEventListener("fullscreenchange", () => {
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
+    if (!document.fullscreenElement) {
+        fullscreenBtn.textContent = "⛶";
+    } else {
+        fullscreenBtn.textContent = "✖";
+    }
+});
+
+window.onload = () => {
+    loadDarkModeState();
+    loadNotesFromLocalStorage();
+    applyTranslations();
+    setupTooltips();
+};
+    </script>
+</body>
+</html>
